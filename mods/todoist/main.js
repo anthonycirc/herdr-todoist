@@ -361,7 +361,9 @@ export default class Todoist extends View {
     // The list has the keyboard first, so j/k move at once; / or i types a query.
     this.handle = cx.focus_handle();
     this.handle.focus();
-    cx.timer.after(300, () => this.inputFocused || this.handle.focus());
+    // A dialog puts the first input in focus: take it back unless / or i asked for it.
+    this.wantInput = false;
+    cx.timer.after(300, () => this.wantInput || this.handle.focus());
     cx.spawn(async (cx) => {
       const read = async (args) => JSON.parse(await td(args)).results ?? [];
       const [filters, labels, projects] = await Promise.all([
@@ -414,7 +416,10 @@ export default class Todoist extends View {
     else if (k === "G" || (k === "g" && e.modifiers?.shift)) move(items.length - 1);
     else if (k === "g") move(0);
     else if (k === "enter") items[this.at] && this.pick(items[this.at]);
-    else if (k === "/" || k === "i") this.input.focus();
+    else if (k === "/" || k === "i") {
+      this.wantInput = true;
+      this.input.focus();
+    }
     else return;
     cx.stop_propagation();
     cx.notify();

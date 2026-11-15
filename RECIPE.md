@@ -74,6 +74,9 @@ the task and a title that opens it in Todoist.
   `exec("td", …)` with the user's PATH. No network access from the mod
   itself, no token stored: `td` holds the login.
 
+- `keys.json`: `{ "global": { "cmd-shift-t": "todoist.menu" } }`, merged into the person's keys
+  only where the key is free.
+
 ## Watch out
 
 - `exec` rejects when `td` can't start: that is the "not installed" state,
