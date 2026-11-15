@@ -293,6 +293,7 @@ export default class Todoist extends View {
     this.labels = [];
     this.projects = [];
     this.at = null;
+    this.moved = false;
     this.scroll = ScrollHandle.new();
     this.input = InputState.new({ value: "", placeholder: "Filter, e.g. @flow & today  ( / )" });
     this.input.on("submit", () => {
@@ -311,7 +312,7 @@ export default class Todoist extends View {
     // The list has the keyboard first, so j/k move at once; / or i types a query.
     this.handle = cx.focus_handle();
     this.handle.focus();
-    cx.timer.after(300, () => this.handle.focus());
+    cx.timer.after(300, () => this.inputFocused || this.handle.focus());
     cx.spawn(async (cx) => {
       const read = async (args) => JSON.parse(await td(args)).results ?? [];
       const [filters, labels, projects] = await Promise.all([
@@ -347,6 +348,7 @@ export default class Todoist extends View {
     const k = e.key;
     const ctrl = e.modifiers?.control;
     const move = (to) => {
+      this.moved = true;
       this.at = Math.max(0, Math.min(items.length - 1, to));
       this.scroll.scroll_to_item(this.rowOf[this.at]);
     };
@@ -376,7 +378,8 @@ export default class Todoist extends View {
     const items = sections.flatMap((s) => s.items);
     const starts = [];
     for (let i = 0, n = 0; i < sections.length; n += sections[i].items.length, i++) starts.push(n);
-    if (this.at === null || this.at >= items.length) this.at = Math.max(0, items.findIndex((v) => sameView(v, on)));
+    // Until a key moves it, the selection follows the current list, which may load late (labels, projects).
+    if (!this.moved || this.at >= items.length) this.at = Math.max(0, items.findIndex((v) => sameView(v, on)));
     // The list's children are headers and rows: where each item's row sits, for scrolling.
     this.rowOf = [];
     let row = 0;
