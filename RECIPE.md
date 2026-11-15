@@ -6,8 +6,9 @@ the task and a title that opens it in Todoist.
 
 ## What you see
 
-- A panel with a 41px header: the title and task count (`Todoist · 6`) at
-  11.5px in `dim`, and a 14px refresh icon on the right.
+- A panel with a 41px header: the list's label and task count (`Today · 6`)
+  with a 12px chevron at 11.5px in `dim`, and a 14px refresh icon on the
+  right that spins (900 ms) in `foreground` while the list is read.
 - 30px rows, 8px rounded, `hover` background: a 14px circle with a 1.5px
   border colored by priority (p1 `ansi1`, p2 `ansi3`, p3 `ansi4`, p4 `dim`),
   the task title in `foreground`, truncated, and for overdue tasks their due
@@ -25,6 +26,14 @@ the task and a title that opens it in Todoist.
   complete`), greys the row while pending, then reads the list again.
   Completing a recurring task moves it to its next date.
 - Clicking a title opens the task (`td task browse`).
+- Clicking the header opens a 280x440 popup: a filter input (Enter picks the
+  typed query), then Lists (Today, Next 7 days, Overdue, Priority 1, No
+  date), Filters (`td filter list`) and Projects (`td project list`), the
+  current one checked. A pick is saved with `setShared("todoist.view.<key>")`,
+  closes the popup and runs `todoist.refresh`.
+- Commands: `todoist.refresh` reads again; `todoist.menu` opens the picker as
+  a dialog (a command has no pointer to anchor a popup).
+- One read at a time: a refresh during a read runs once it ends.
 - A failed `td` call shows its error in `ansi1` above the list and keeps
   the last rows.
 
@@ -33,8 +42,12 @@ the task and a title that opens it in Todoist.
 - `mods/todoist/main.js`: one `View`. Imports `View`, `div`, `svg` from
   `gpui-kit`, `v_flex`, `h_flex` from `gpui-base`, `exec`, `theme`, `props`
   from `herdr`. `mod.json`: `{ "place": "none" }`. `refresh.svg`: a tinted icon.
-- Block props: `filter` (Todoist filter query, default `today | overdue`),
-  `title` (default `Todoist`), `refresh` (seconds).
+- Block props: `filter` (default query, `today | overdue`), `title` (its
+  label, default `Today`), `refresh` (seconds), `key` (shared-state key).
+- Lists read with `td task list --filter`, `td filter view id:` (saved
+  filters keep their own language, e.g. French queries) or
+  `td task list --project id:`. Icons: `refresh.svg`, `chevron-down.svg`,
+  `check.svg`. The popup is the same mod with `props.menu`.
 - Programs: `td` (Doist's official `todoist-cli`), run locally through
   `exec("td", …)` with the user's PATH. No network access from the mod
   itself, no token stored: `td` holds the login.
@@ -49,6 +62,11 @@ the task and a title that opens it in Todoist.
 - Don't keep a `cx`: the refresh and complete tasks take their own from
   `cx.spawn`.
 - Herdr's shipped layouts can't be edited: add the block to a clone.
+- Saved filters may be written in another language: read them with
+  `td filter view`, not by passing their query to `--filter`.
+- Saving a file reloads the mod in place but the `nextCommand` loop doesn't
+  restart: commands reach it again after a fresh start (app restart or a
+  layout switch).
 
 ## Done when
 
@@ -57,4 +75,7 @@ the task and a title that opens it in Todoist.
 - Clicking a circle completes that task in Todoist and the row disappears.
 - Clicking a title opens the task.
 - With a `filter` prop, the panel lists that filter's tasks.
+- Picking a saved filter or a project in the header popup lists its tasks and
+  survives a restart; typing a query and Enter lists that query.
+- `todoist.refresh` spins the refresh icon; `todoist.menu` opens the picker.
 - With `td` off the PATH, the panel shows the install hint instead of an error.
