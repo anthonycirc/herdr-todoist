@@ -10,7 +10,7 @@
 // Commands: todoist.refresh, todoist.menu
 
 import { View, div, svg } from "gpui-kit";
-import { v_flex, h_flex, InputState, Input } from "gpui-base";
+import { v_flex, h_flex, InputState, Input, ScrollHandle } from "gpui-base";
 import { exec, theme, props, shared, setShared, openOverlay, closeOverlay, nextCommand, run } from "herdr";
 
 const DEFAULT_FILTER = "today | overdue";
@@ -292,13 +292,26 @@ export default class Todoist extends View {
     this.filters = [];
     this.labels = [];
     this.projects = [];
-    this.input = InputState.new({ value: "", placeholder: "Filter, e.g. @flow & today" });
+    this.at = null;
+    this.scroll = ScrollHandle.new();
+    this.input = InputState.new({ value: "", placeholder: "Filter, e.g. @flow & today  ( / )" });
     this.input.on("submit", () => {
       const query = this.input.value().trim();
       if (query) this.pick({ kind: "query", query, label: query });
     });
+    this.inputFocused = false;
+    this.input.on("focus", (_e, cx) => {
+      this.inputFocused = true;
+      cx.notify();
+    });
+    this.input.on("blur", (_e, cx) => {
+      this.inputFocused = false;
+      cx.notify();
+    });
+    // The list has the keyboard first, so j/k move at once; / or i types a query.
     this.handle = cx.focus_handle();
     this.handle.focus();
+    cx.timer.after(300, () => this.handle.focus());
     cx.spawn(async (cx) => {
       const read = async (args) => JSON.parse(await td(args)).results ?? [];
       const [filters, labels, projects] = await Promise.all([
@@ -313,6 +326,15 @@ export default class Todoist extends View {
     });
   }
 
+  sections() {
+    return [
+      { title: "Lists", items: PRESETS },
+      { title: "Filters", items: this.filters },
+      { title: "Labels", items: this.labels },
+      { title: "Projects", items: this.projects },
+    ].filter((s) => s.items.length > 0);
+  }
+
   pick(view) {
     const p = props();
     setShared(p.key, view);
@@ -320,13 +342,55 @@ export default class Todoist extends View {
     run("todoist.refresh");
   }
 
+  // Up/down/j/k move by one, h/l to the previous/next section's first item, g/G to the ends.
+  menuKey(e, cx, items, starts) {
+    const k = e.key;
+    const ctrl = e.modifiers?.control;
+    const move = (to) => {
+      this.at = Math.max(0, Math.min(items.length - 1, to));
+      this.scroll.scroll_to_item(this.rowOf[this.at]);
+    };
+    if (k === "escape") {
+      if (this.inputFocused) this.handle.focus();
+      else closeOverlay(props().overlay);
+    } else if (k === "down" || (ctrl && (k === "j" || k === "n"))) move(this.at + 1);
+    else if (k === "up" || (ctrl && (k === "k" || k === "p"))) move(this.at - 1);
+    else if (this.inputFocused) return;
+    else if (k === "j") move(this.at + 1);
+    else if (k === "k") move(this.at - 1);
+    else if (k === "l") move(starts.find((s) => s > this.at) ?? this.at);
+    else if (k === "h") move([...starts].reverse().find((s) => s < this.at) ?? 0);
+    else if (k === "G" || (k === "g" && e.modifiers?.shift)) move(items.length - 1);
+    else if (k === "g") move(0);
+    else if (k === "enter") items[this.at] && this.pick(items[this.at]);
+    else if (k === "/" || k === "i") this.input.focus();
+    else return;
+    cx.stop_propagation();
+    cx.notify();
+  }
+
   renderMenu() {
     const t = theme();
     const on = currentView(props().key);
+    const sections = this.sections();
+    const items = sections.flatMap((s) => s.items);
+    const starts = [];
+    for (let i = 0, n = 0; i < sections.length; n += sections[i].items.length, i++) starts.push(n);
+    if (this.at === null || this.at >= items.length) this.at = Math.max(0, items.findIndex((v) => sameView(v, on)));
+    // The list's children are headers and rows: where each item's row sits, for scrolling.
+    this.rowOf = [];
+    let row = 0;
+    for (const s of sections) {
+      row++;
+      for (const _ of s.items) this.rowOf.push(row++);
+    }
     const section = (text) => div().px(8).pt(8).pb(4).text_size(11).text_color(t.dim).child(text);
-    const item = (v, i) =>
-      h_flex()
-        .id(`td-menu-${v.kind}-${v.id ?? v.name ?? i}`)
+    let index = 0;
+    const item = (v) => {
+      const i = index++;
+      const selected = i === this.at;
+      return h_flex()
+        .id(`td-menu-${v.kind}-${v.id ?? v.name ?? v.query}`)
         .h(30)
         .px(8)
         .gap(9)
@@ -335,19 +399,16 @@ export default class Todoist extends View {
         .items_center()
         .text_color(t.foreground)
         .cursor_pointer()
-        .hover((el) => el.bg(t.hover))
+        .when(selected, (el) => el.bg(t.selected))
+        .hover((el) => el.bg(selected ? t.selected : t.hover))
         .on_click(() => this.pick(v))
         .child(div().flex_1().min_w(0).truncate().child(v.label))
         .when(sameView(v, on), (el) => el.child(svg("mods/todoist/check.svg").size(14).flex_none()));
+    };
     return v_flex()
       .id("td-menu")
       .track_focus(this.handle)
-      .on_key_down((e, cx) => {
-        if (e.key === "escape") {
-          closeOverlay(props().overlay);
-          cx.stop_propagation();
-        }
-      })
+      .on_key_down((e, cx) => this.menuKey(e, cx, items, starts))
       .size_full()
       .min_h(0)
       .p(5)
@@ -358,7 +419,16 @@ export default class Todoist extends View {
           .px(4)
           .pt(4)
           .pb(2)
-          .child(Input.new(this.input).h(30).px(8).rounded(7).border_1().border_color(t.input).bg(t.background).text_size(12.5)),
+          .child(
+            Input.new(this.input)
+              .h(30)
+              .px(8)
+              .rounded(7)
+              .border_1()
+              .border_color(this.inputFocused ? t.accent : t.input)
+              .bg(t.background)
+              .text_size(12.5),
+          ),
       )
       .child(
         v_flex()
@@ -366,11 +436,18 @@ export default class Todoist extends View {
           .flex_1()
           .min_h(0)
           .overflow_y_scrollbar()
-          .child(section("Lists"))
-          .children(PRESETS.map(item))
-          .when(this.filters.length > 0, (el) => el.child(section("Filters")).children(this.filters.map(item)))
-          .when(this.labels.length > 0, (el) => el.child(section("Labels")).children(this.labels.map(item)))
-          .when(this.projects.length > 0, (el) => el.child(section("Projects")).children(this.projects.map(item))),
+          .track_scroll(this.scroll)
+          .children(sections.flatMap((s) => [section(s.title), ...s.items.map(item)])),
+      )
+      .child(
+        div()
+          .px(8)
+          .pt(4)
+          .pb(2)
+          .flex_none()
+          .text_size(10.5)
+          .text_color(t.dim)
+          .child(this.inputFocused ? "⏎ search · ↑↓ move · esc back" : "j/k move · h/l section · ⏎ pick · / search"),
       );
   }
 }

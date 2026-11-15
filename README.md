@@ -70,6 +70,17 @@ Click the header (`Today · 6 ⌄`) to choose what the panel shows:
 
 In a query, labels are `@name` and projects `#name`: `@flow & today`.
 
+The picker works from the keyboard:
+
+| Key                      | What it does                         |
+|--------------------------|--------------------------------------|
+| `j` / `k`, `↓` / `↑`     | Next / previous item                 |
+| `h` / `l`                | Previous / next section              |
+| `g` / `G`                | First / last item                    |
+| `Enter`                  | Show the selected list               |
+| `/` or `i`               | Type a query (`↓`/`↑`, `ctrl-j`/`ctrl-k` still move) |
+| `Esc`                    | Leave the query field, then close    |
+
 <img src="preview-menu.png" alt="List picker" width="282">
 
 The choice is kept across restarts. The refresh icon spins while the list is
