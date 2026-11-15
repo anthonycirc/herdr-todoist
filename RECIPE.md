@@ -47,6 +47,11 @@ the task and a title that opens it in Todoist.
 - Commands: `todoist.refresh` reads again; `todoist.menu` opens the picker as
   a dialog (a command has no pointer to anchor a popup).
 - One read at a time: a refresh during a read runs once it ends.
+- `mod.json` has `"focusable": true`: `pane.go` gives the panel the keyboard
+  (it gets `"focus"` from `nextCommand()` and focuses its handle). Focused,
+  the selected row has the `selected` background and a 10.5px `dim` footer
+  lists the keys: `j`/`k`, `g`/`G`, `x`/Space complete, Enter/`o` open, `r`
+  refresh, `/`/`m` the picker (as a dialog), `l`/Esc `pane.go` right.
 - A failed `td` call shows its error in `ansi1` above the list: the API's
   `message` out of td's JSON, plus "Labels are @name, projects #name." for a
   rejected query. It keeps the last rows of the same list, and clears them
@@ -58,7 +63,7 @@ the task and a title that opens it in Todoist.
   `gpui-kit`; `v_flex`, `h_flex`, `InputState`, `Input` from `gpui-base`;
   `exec`, `theme`, `props`, `shared`, `setShared`, `openOverlay`,
   `closeOverlay`, `nextCommand`, `run` from `herdr`. `mod.json`:
-  `{ "place": "none" }`.
+  `{ "place": "none", "focusable": true }`.
 - Block props: `filter` (default query, `today | overdue`), `title` (its
   label, default `Today`), `refresh` (seconds), `key` (shared-state key).
 - Lists read with `td task list --filter`, `td filter view id:` (saved
