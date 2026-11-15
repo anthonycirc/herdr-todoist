@@ -40,8 +40,10 @@ the task and a title that opens it in Todoist.
 ## Built from
 
 - `mods/todoist/main.js`: one `View`. Imports `View`, `div`, `svg` from
-  `gpui-kit`, `v_flex`, `h_flex` from `gpui-base`, `exec`, `theme`, `props`
-  from `herdr`. `mod.json`: `{ "place": "none" }`. `refresh.svg`: a tinted icon.
+  `gpui-kit`; `v_flex`, `h_flex`, `InputState`, `Input` from `gpui-base`;
+  `exec`, `theme`, `props`, `shared`, `setShared`, `openOverlay`,
+  `closeOverlay`, `nextCommand`, `run` from `herdr`. `mod.json`:
+  `{ "place": "none" }`.
 - Block props: `filter` (default query, `today | overdue`), `title` (its
   label, default `Today`), `refresh` (seconds), `key` (shared-state key).
 - Lists read with `td task list --filter`, `td filter view id:` (saved
