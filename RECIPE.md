@@ -4,6 +4,8 @@ A panel of your Todoist tasks, due today and overdue by default, in your
 existing Herdr window. Each row has a priority-colored circle that completes
 the task and a title that opens it in Todoist.
 
+![todoist](preview.png)
+
 ## What you see
 
 - A panel with a 41px header: the list's label and task count (`Today · 6`)

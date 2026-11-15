@@ -5,6 +5,8 @@ panel, next to your terminals and agents. Click a task's circle to complete
 it, click its title to open it in Todoist, click the header to pick which
 list to show.
 
+![herdr-todoist](preview.png)
+
 It reads Todoist through the official [`td` CLI](https://github.com/todoist/todoist-cli),
 so the mod stores no token: `td` keeps your login.
 
