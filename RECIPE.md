@@ -34,6 +34,13 @@ the task and a title that opens it in Todoist.
   and Projects (`td project list`), the
   current one checked. A pick is saved with `setShared("todoist.view.<key>")`,
   closes the popup and runs `todoist.refresh`.
+- The picker opens with the list focused and the current list selected
+  (`selected` background). `j`/`k` and arrows move, `h`/`l` jump to the
+  previous/next section, `g`/`G` to the ends, Enter picks, `/` or `i` focus
+  the query input (`accent` border), where arrows and `ctrl-j`/`ctrl-k`
+  still move and Esc returns to the list; Esc on the list closes. The
+  selection scrolls into view (`ScrollHandle.scroll_to_item`, counting the
+  section headers). A 10.5px `dim` footer lists the keys.
 
   ![List picker](preview-menu.png)
 
