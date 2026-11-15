@@ -70,6 +70,8 @@ Click the header (`Today · 6 ⌄`) to choose what the panel shows:
 
 In a query, labels are `@name` and projects `#name`: `@flow & today`.
 
+<img src="preview-menu.png" alt="List picker" width="282">
+
 The choice is kept across restarts. The refresh icon spins while the list is
 read; its tooltip says when it was last updated.
 

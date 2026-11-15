@@ -34,6 +34,9 @@ the task and a title that opens it in Todoist.
   and Projects (`td project list`), the
   current one checked. A pick is saved with `setShared("todoist.view.<key>")`,
   closes the popup and runs `todoist.refresh`.
+
+  ![List picker](preview-menu.png)
+
 - Commands: `todoist.refresh` reads again; `todoist.menu` opens the picker as
   a dialog (a command has no pointer to anchor a popup).
 - One read at a time: a refresh during a read runs once it ends.
