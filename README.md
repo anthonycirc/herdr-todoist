@@ -103,6 +103,21 @@ Two panels side by side:
 { "id": "todoist-work", "type": "block", "content": { "mod": "todoist", "props": { "key": "work", "title": "Work", "filter": "#Work & (today | overdue)" } } }
 ```
 
+## Keyboard in the panel
+
+The panel takes the keyboard like a pane: `pane.go` reaches it, for example
+`ctrl-h` from the terminal next to the sidebar (`"ctrl-h": "pane.go:left"`).
+
+| Key              | What it does                     |
+|------------------|----------------------------------|
+| `j` / `k`        | Next / previous task             |
+| `g` / `G`        | First / last task                |
+| `x` or `Space`   | Complete the selected task       |
+| `Enter` or `o`   | Open it in Todoist               |
+| `r`              | Refresh                          |
+| `/` or `m`       | Pick a list                      |
+| `l` or `Esc`     | Back to the pane on the right    |
+
 ## Commands and keys
 
 | Command           | What it does              |

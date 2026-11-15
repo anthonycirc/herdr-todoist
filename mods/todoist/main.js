@@ -7,7 +7,7 @@
 //   refresh  seconds between reads (>= 15)                       default 60
 //   key      keeps the picked list apart when several panels are shown
 //
-// Commands: todoist.refresh, todoist.menu
+// Commands: todoist.refresh, todoist.menu. The panel takes the keyboard from pane.go (ctrl-h).
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, ScrollHandle } from "gpui-base";
@@ -95,12 +95,18 @@ export default class Todoist extends View {
     this.again = false;
     this.pending = new Set();
     this.hovered = null;
+    this.sel = 0;
+    this.handle = cx.focus_handle();
+    this.listScroll = ScrollHandle.new();
     cx.timer.every(config().refresh, (cx) => this.refresh(cx));
     cx.spawn(async (cx) => {
       for (;;) {
         const c = await nextCommand();
         if (c === "refresh") this.refresh(cx);
         else if (c === "menu") this.openMenu("dialog");
+        // pane.go landed here, or a popup over the panel closed.
+        else if (c === "focus") this.handle.focus();
+        cx.notify();
       }
     });
     this.refresh(cx);
@@ -162,7 +168,32 @@ export default class Todoist extends View {
     openOverlay({ mod: "todoist", kind, width: 280, height: 440, props: { menu: true, key: config().key } });
   }
 
-  row(t, task, now) {
+  // j/k move, x completes, Enter opens, r refreshes, / or m picks a list, l or Esc goes back.
+  panelKey(e, cx) {
+    const k = e.key;
+    const n = this.tasks.length;
+    const move = (to) => {
+      this.sel = Math.max(0, Math.min(n - 1, to));
+      this.listScroll.scroll_to_item(this.sel);
+    };
+    const task = this.tasks[this.sel];
+    if (e.modifiers?.control || e.modifiers?.platform) return;
+    if (k === "j" || k === "down") move(this.sel + 1);
+    else if (k === "k" || k === "up") move(this.sel - 1);
+    else if (k === "G" || (k === "g" && e.modifiers?.shift)) move(n - 1);
+    else if (k === "g") move(0);
+    else if (k === "x" || k === "space") task && this.complete(task, cx);
+    else if (k === "enter" || k === "o") task && td(["task", "browse", `id:${task.id}`]).catch(() => {});
+    else if (k === "r") this.refresh(cx);
+    else if (k === "/" || k === "m") this.openMenu("dialog");
+    else if (k === "l" || k === "escape") run("pane.go", { direction: "right" });
+    else return;
+    cx.stop_propagation();
+    cx.notify();
+  }
+
+  row(t, task, now, i, focused) {
+    const selected = focused && i === this.sel;
     const done = this.pending.has(task.id);
     const overdue = Boolean(task.due?.date) && task.due.date < now;
     const color = priorityColor(t, task.priority);
@@ -174,7 +205,8 @@ export default class Todoist extends View {
       .rounded(8)
       .items_center()
       .gap(9)
-      .hover((s) => s.bg(t.hover))
+      .when(selected, (el) => el.bg(t.selected))
+      .hover((s) => s.bg(selected ? t.selected : t.hover))
       .on_hover((on, cx) => {
         if (on) this.hovered = task.id;
         else if (this.hovered === task.id) this.hovered = null;
@@ -222,8 +254,13 @@ export default class Todoist extends View {
       cx.spawn(async (cx) => this.refresh(cx));
     }
     const note = (text, color) => div().px(16).pb(6).text_size(12).text_color(color).child(text);
+    const focused = this.handle.is_focused();
+    this.sel = Math.max(0, Math.min(this.tasks.length - 1, this.sel));
     const updated = this.updated ? `Refresh · updated ${this.updated.toLocaleTimeString().slice(0, 5)}` : "Refresh";
     return v_flex()
+      .id("td-panel")
+      .track_focus(this.handle)
+      .on_key_down((e, cx) => this.panelKey(e, cx))
       .size_full()
       .min_h(0)
       .bg(t.chrome)
@@ -282,7 +319,19 @@ export default class Todoist extends View {
           .min_h(0)
           .px(8)
           .overflow_y_scrollbar()
-          .children(this.tasks.map((task) => this.row(t, task, now))),
+          .track_scroll(this.listScroll)
+          .children(this.tasks.map((task, i) => this.row(t, task, now, i, focused))),
+      )
+      .when(focused, (el) =>
+        el.child(
+          div()
+            .px(16)
+            .py(6)
+            .flex_none()
+            .text_size(10.5)
+            .text_color(t.dim)
+            .child("j/k move · x done · ⏎ open · / list · l back"),
+        ),
       );
   }
 
