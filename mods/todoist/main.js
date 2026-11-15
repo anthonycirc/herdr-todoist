@@ -52,11 +52,22 @@ const currentView = (key = config().key) => {
   return shared(key) ?? { kind: "query", query: c.filter, label: c.title };
 };
 
-const sameView = (a, b) => a?.kind === b?.kind && (a?.query ?? a?.id) === (b?.query ?? b?.id);
+const viewKey = (v) => v?.query ?? v?.id ?? v?.name;
+const sameView = (a, b) => a?.kind === b?.kind && viewKey(a) === viewKey(b);
+
+// td prints API errors as JSON: keep their message, and say how labels and projects are written.
+const errorText = (e, view) => {
+  let msg = String(e?.message ?? e);
+  try {
+    msg = JSON.parse(msg)?.error?.message ?? msg;
+  } catch {}
+  return view?.kind === "query" && /query/i.test(msg) ? `${msg}. Labels are @name, projects #name.` : msg;
+};
 
 const listArgs = (view) =>
   view.kind === "filter" ? ["filter", "view", `id:${view.id}`, "--json", "--all"]
   : view.kind === "project" ? ["task", "list", "--project", `id:${view.id}`, "--json", "--all"]
+  : view.kind === "label" ? ["task", "list", "--label", view.name, "--json", "--all"]
   : ["task", "list", "--filter", view.query, "--json", "--all"];
 
 // `td` comes from the user's PATH; a failed start means it isn't installed.
@@ -115,7 +126,10 @@ export default class Todoist extends View {
         this.missing = false;
       } catch (e) {
         this.missing = Boolean(e.missing);
-        this.error = e.missing ? null : String(e?.message ?? e);
+        this.error = e.missing ? null : errorText(e, view);
+        // Rows of another list would read as this one's.
+        if (!sameView(view, this.loadedView)) this.tasks = [];
+        this.loadedView = view;
       }
       this.loading = false;
       this.refreshing = false;
@@ -272,12 +286,13 @@ export default class Todoist extends View {
       );
   }
 
-  // The list menu: presets, saved Todoist filters, projects and a free query.
+  // The list menu: presets, saved Todoist filters, labels, projects and a free query.
 
   initMenu(cx) {
     this.filters = [];
+    this.labels = [];
     this.projects = [];
-    this.input = InputState.new({ value: "", placeholder: "Todoist filter, e.g. #Work & today" });
+    this.input = InputState.new({ value: "", placeholder: "Filter, e.g. @flow & today" });
     this.input.on("submit", () => {
       const query = this.input.value().trim();
       if (query) this.pick({ kind: "query", query, label: query });
@@ -286,11 +301,13 @@ export default class Todoist extends View {
     this.handle.focus();
     cx.spawn(async (cx) => {
       const read = async (args) => JSON.parse(await td(args)).results ?? [];
-      const [filters, projects] = await Promise.all([
+      const [filters, labels, projects] = await Promise.all([
         read(["filter", "list", "--json"]).catch(() => []),
+        read(["label", "list", "--json"]).catch(() => []),
         read(["project", "list", "--json", "--all"]).catch(() => []),
       ]);
       this.filters = filters.map((f) => ({ kind: "filter", id: f.id, label: f.name }));
+      this.labels = labels.map((l) => ({ kind: "label", name: l.name, label: `@${l.name}` }));
       this.projects = projects.map((p) => ({ kind: "project", id: p.id, label: p.name }));
       cx.notify();
     });
@@ -309,7 +326,7 @@ export default class Todoist extends View {
     const section = (text) => div().px(8).pt(8).pb(4).text_size(11).text_color(t.dim).child(text);
     const item = (v, i) =>
       h_flex()
-        .id(`td-menu-${v.kind}-${v.id ?? i}`)
+        .id(`td-menu-${v.kind}-${v.id ?? v.name ?? i}`)
         .h(30)
         .px(8)
         .gap(9)
@@ -352,6 +369,7 @@ export default class Todoist extends View {
           .child(section("Lists"))
           .children(PRESETS.map(item))
           .when(this.filters.length > 0, (el) => el.child(section("Filters")).children(this.filters.map(item)))
+          .when(this.labels.length > 0, (el) => el.child(section("Labels")).children(this.labels.map(item)))
           .when(this.projects.length > 0, (el) => el.child(section("Projects")).children(this.projects.map(item))),
       );
   }

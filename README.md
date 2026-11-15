@@ -61,9 +61,12 @@ Click the header (`Today · 6 ⌄`) to choose what the panel shows:
 
 - **Lists**: Today (default), Next 7 days, Overdue, Priority 1, No date
 - **Filters**: your saved Todoist filters
+- **Labels**: your Todoist labels (`@name`)
 - **Projects**: your Todoist projects
 - **Any query**: type a [Todoist filter query](https://todoist.com/help/articles/introduction-to-filters-V98wIH)
   in the field at the top and press Enter
+
+In a query, labels are `@name` and projects `#name`: `@flow & today`.
 
 The choice is kept across restarts. The refresh icon spins while the list is
 read; its tooltip says when it was last updated.
@@ -102,7 +105,8 @@ Bind them in `~/.config/herdr-app/keys.json`, for example:
 
 - `td task list --filter <query> --json --all`, `td filter view id:<id>` or
   `td task list --project id:<id>` on each refresh, depending on the list
-- `td filter list` and `td project list` when the list picker opens
+- `td task list --label <name>` for a label
+- `td filter list`, `td label list` and `td project list` when the list picker opens
 - `td task complete id:<id>` when you complete a task
 - `td task browse id:<id>` when you open a task
 

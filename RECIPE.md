@@ -28,14 +28,17 @@ the task and a title that opens it in Todoist.
 - Clicking a title opens the task (`td task browse`).
 - Clicking the header opens a 280x440 popup: a filter input (Enter picks the
   typed query), then Lists (Today, Next 7 days, Overdue, Priority 1, No
-  date), Filters (`td filter list`) and Projects (`td project list`), the
+  date), Filters (`td filter list`), Labels (`td label list`, shown `@name`)
+  and Projects (`td project list`), the
   current one checked. A pick is saved with `setShared("todoist.view.<key>")`,
   closes the popup and runs `todoist.refresh`.
 - Commands: `todoist.refresh` reads again; `todoist.menu` opens the picker as
   a dialog (a command has no pointer to anchor a popup).
 - One read at a time: a refresh during a read runs once it ends.
-- A failed `td` call shows its error in `ansi1` above the list and keeps
-  the last rows.
+- A failed `td` call shows its error in `ansi1` above the list: the API's
+  `message` out of td's JSON, plus "Labels are @name, projects #name." for a
+  rejected query. It keeps the last rows of the same list, and clears them
+  when the failing list is a new one.
 
 ## Built from
 
@@ -48,7 +51,7 @@ the task and a title that opens it in Todoist.
   label, default `Today`), `refresh` (seconds), `key` (shared-state key).
 - Lists read with `td task list --filter`, `td filter view id:` (saved
   filters keep their own language, e.g. French queries) or
-  `td task list --project id:`. Icons: `refresh.svg`, `chevron-down.svg`,
+  `td task list --project id:` or `td task list --label <name>`. Icons: `refresh.svg`, `chevron-down.svg`,
   `check.svg`. The popup is the same mod with `props.menu`.
 - Programs: `td` (Doist's official `todoist-cli`), run locally through
   `exec("td", …)` with the user's PATH. No network access from the mod
@@ -64,6 +67,7 @@ the task and a title that opens it in Todoist.
 - Don't keep a `cx`: the refresh and complete tasks take their own from
   `cx.spawn`.
 - Herdr's shipped layouts can't be edited: add the block to a clone.
+- `#name` is a project, `@name` a label: `#flow` for a label fails.
 - Saved filters may be written in another language: read them with
   `td filter view`, not by passing their query to `--filter`.
 - Saving a file reloads the mod in place but the `nextCommand` loop doesn't
